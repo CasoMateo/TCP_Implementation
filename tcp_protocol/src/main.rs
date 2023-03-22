@@ -1,32 +1,38 @@
 use std::io;
 use std::net::Ipv4Addr;
+use std::error::Error;
+
 
 fn main() -> io::Result<()> {
     example_read_package_loop_parsing_flags_protocol_ignore_no_ipv4()
 }
 
 pub struct Ipv4Slice {
-    protocol: u16
-    source_addr: String
-    destination_addr: String
-    source_port: u16 
-    destination_port: u16
+    protocol: u16,
+    source_addr: String,
+    destination_addr: String,
+    source_port: u16,
+    destination_port: u16,
 }
 
-fn parseSlice(buffer: &[u8]) -> Packet {
+fn parseSlice(buffer: &[u8]) -> Result<Ipv4Slice, Box<dyn Error>> {
+    if buffer.len() < 20 {
+        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Packet length is less than 20 bytes")));
+    }
+
     let protocol = u16::from_be_bytes([buffer[0], buffer[1]]);
     let source_address = format!("{}.{}.{}.{}", buffer[12], buffer[13], buffer[14], buffer[15]);
     let destination_address = format!("{}.{}.{}.{}", buffer[16], buffer[17], buffer[18], buffer[19]);
-    let source_port = Some(u16::from_be_bytes(&buffer[0..2].try_into().unwrap()))
-    let destination_port = Some(u16::from_be_bytes(&buffer[2..4].try_into().unwrap()))
+    let source_port = u16::from_be_bytes(&buffer[0..2].try_into().unwrap());
+    let destination_port = u16::from_be_bytes(&buffer[2..4].try_into().unwrap());
 
-    return Ipv4Slice {
+    Ok(Ipv4Slice {
         protocol,
-        source_address,
-        destination_address,
+        source_addr: source_address,
+        destination_addr: destination_address,
         source_port,
-        destination_port
-    }
+        destination_port,
+    });
 }
 
 fn example_read_single_package() -> io::Result<()> {
